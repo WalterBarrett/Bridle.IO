@@ -1,90 +1,28 @@
 ﻿using System;
 using System.IO;
+using System.Text;
 
 namespace Bridle.IO
 {
-	public sealed class FileWriter : IDisposable
+	public sealed class FileWriter : FileWrapper, IDisposable
 	{
-		private readonly Stream _s;
+		public FileWriter(Stream stream, ByteOrder endianness) : base(stream)
+		{
+			ByteOrder = endianness;
+		}
 
-	    public void Flush()
+		public FileWriter(string fileName, ByteOrder endianness, bool overwrite) : base(overwrite ? File.Create(fileName) : File.OpenWrite(fileName))
 	    {
-            _s.Flush();
-	    }
+			ByteOrder = endianness;
+		}
 
-	    private bool _isLittleEndian = false;
+		public FileWriter(byte[] file, ByteOrder endianness) : base(new MemoryStream(file))
+		{
+			ByteOrder = endianness;
+		}
 
-        public bool LittleEndian
-        {
-	        get => _isLittleEndian;
-            set
-	        {
-	            _isLittleEndian = value;
-                SetEndianness(value);
-            }
-	    }
-
-
-	    public FileWriter(string fileName, bool isLittleEndian, bool overwrite)
-	    {
-	        if (overwrite)
-	        {
-	            _s = File.Create(fileName);
-            }
-            else
-	        {
-	            _s = File.OpenWrite(fileName);
-	        }
-            LittleEndian = isLittleEndian;
-	    }
-
-	    public FileWriter(Stream stream, bool isLittleEndian)
-	    {
-            _s = stream;
-	        LittleEndian = isLittleEndian;
-	    }
-
-	    public long Length => _s.Length;
-
-	    public FileReader GetReader()
-	    {
-            return new FileReader(_s, LittleEndian);
-	    }
-
-	    public void SetEndianness(bool isLittleEndian)
-	    {
-	        if (isLittleEndian)
-	        {
-	            WriteInt16 = WriteInt16Le;
-	            WriteUInt16 = WriteUInt16Le;
-	            WriteInt32 = WriteInt32Le;
-	            WriteUInt32 = WriteUInt32Le;
-	            WriteInt64 = WriteInt64Le;
-	            WriteUInt64 = WriteUInt64Le;
-	            WriteFloat = WriteFloatLe;
-	            WriteDouble = WriteDoubleLe;
-	        }
-	        else
-	        {
-	            WriteInt16 = WriteInt16Be;
-	            WriteUInt16 = WriteUInt16Be;
-	            WriteInt32 = WriteInt32Be;
-	            WriteUInt32 = WriteUInt32Be;
-	            WriteInt64 = WriteInt64Be;
-	            WriteUInt64 = WriteUInt64Be;
-	            WriteFloat = WriteFloatBe;
-	            WriteDouble = WriteDoubleBe;
-	        }
-	    }
-
-        #region Endianness Agnostic
-        public Int64 CurrentPosition
-	    {
-	        get => _s.Position;
-	        set => _s.Seek(value, SeekOrigin.Begin);
-	    }
-
-        public void WriteCString(string value, int forceLength = -1)
+		#region Endianness Agnostic
+		public void WriteCString(string value, int forceLength = -1)
         {
             int i;
 
@@ -395,6 +333,58 @@ namespace Bridle.IO
             }
             _s.Write(temp, 0, temp.Length);
         }
-        #endregion
-    }
+		#endregion
+
+		#region Strings
+
+		#endregion
+
+		protected override void SetMethods(ByteOrder byteOrder)
+		{
+			switch (byteOrder)
+			{
+				case ByteOrder.LittleEndian:
+					WriteInt16 = WriteInt16Le;
+					WriteUInt16 = WriteUInt16Le;
+					WriteInt32 = WriteInt32Le;
+					WriteUInt32 = WriteUInt32Le;
+					WriteInt64 = WriteInt64Le;
+					WriteUInt64 = WriteUInt64Le;
+					WriteFloat = WriteFloatLe;
+					WriteDouble = WriteDoubleLe;
+					break;
+				case ByteOrder.BigEndian:
+					WriteInt16 = WriteInt16Be;
+					WriteUInt16 = WriteUInt16Be;
+					WriteInt32 = WriteInt32Be;
+					WriteUInt32 = WriteUInt32Be;
+					WriteInt64 = WriteInt64Be;
+					WriteUInt64 = WriteUInt64Be;
+					WriteFloat = WriteFloatBe;
+					WriteDouble = WriteDoubleBe;
+					break;
+				case ByteOrder.None:
+				default:
+					WriteInt16 = null;
+					WriteUInt16 = null;
+					WriteInt32 = null;
+					WriteUInt32 = null;
+					WriteInt64 = null;
+					WriteUInt64 = null;
+					WriteFloat = null;
+					WriteDouble = null;
+					break;
+			}
+		}
+
+		public FileReader GetReader()
+		{
+			return new FileReader(_s, ByteOrder);
+		}
+
+		public void Flush()
+		{
+			_s.Flush();
+		}
+	}
 }

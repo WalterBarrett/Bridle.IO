@@ -40,8 +40,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ByteOrder.cs" />
     <Compile Include="FileReader.cs" />
     <Compile Include="FileWriter.cs" />
+    <Compile Include="FileWrapper.cs" />
+    <Compile Include="IReadable.cs" />
+    <Compile Include="IWritable.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

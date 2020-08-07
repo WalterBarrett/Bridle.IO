@@ -4,73 +4,50 @@ using System.Text;
 
 namespace Bridle.IO
 {
-	public sealed class FileReader : IDisposable
+	public sealed class FileReader : FileWrapper, IDisposable
 	{
-		private readonly Stream _s;
-
-	    public FileReader(Stream stream, bool isLittleEndian)
+		public FileReader(Stream stream, ByteOrder endianness) : base(stream)
 	    {
-	        _s = stream;
-	        SetEndianness(isLittleEndian);
+	        ByteOrder = endianness;
 	    }
 
-	    public long Length => _s.Length;
-
-        public FileReader(byte[] file, bool isLittleEndian)
+		public FileReader(string fileName, ByteOrder endianness) : base(new MemoryStream(File.ReadAllBytes(fileName)))
 		{
-			_s = new MemoryStream(file);
-		    SetEndianness(isLittleEndian);
+			ByteOrder = endianness;
         }
 
-		public FileReader(string fileName, bool isLittleEndian)
+		public FileReader(byte[] file, ByteOrder endianness) : base(new MemoryStream(file))
 		{
-			byte[] file = File.ReadAllBytes(fileName);
-			_s = new MemoryStream(file);
-		    SetEndianness(isLittleEndian);
+			ByteOrder = endianness;
 		}
-
-	    public void SetEndianness(bool isLittleEndian)
-	    {
-	        if (isLittleEndian)
-	        {
-	            ReadInt16 = ReadInt16Le;
-	            ReadUInt16 = ReadUInt16Le;
-                ReadInt32 = ReadInt32Le;
-	            ReadUInt32 = ReadUInt32Le;
-	            ReadInt64 = ReadInt64Le;
-	            ReadUInt64 = ReadUInt64Le;
-	            ReadFloat = ReadFloatLe;
-	            ReadDouble = ReadDoubleLe;
-            }
-	        else
-	        {
-	            ReadInt16 = ReadInt16Be;
-	            ReadUInt16 = ReadUInt16Be;
-                ReadInt32 = ReadInt32Be;
-	            ReadUInt32 = ReadUInt32Be;
-	            ReadInt64 = ReadInt64Be;
-	            ReadUInt64 = ReadUInt64Be;
-	            ReadFloat = ReadFloatBe;
-	            ReadDouble = ReadDoubleBe;
-            }
-	    }
 
         #region Endianness Agnostic
-        public bool ReachedEndOfFile
-		{
-		    get => _s.Position >= _s.Length;
-		}
-
-	    public long Position
-		{
-			get => _s.Position;
-	        set => _s.Seek(value, SeekOrigin.Begin);
-	    }
-
         public byte[] Read(int length)
 		{
 			byte[] ba = new byte[length];
 			_s.Read(ba, 0, length);
+			return ba;
+		}
+
+		public byte[] Read(long length)
+		{
+			byte[] ba = new byte[length];
+			for (long i = 0; i < length; i++)
+			{
+				ba[i] = (byte)_s.ReadByte();
+			}
+
+			return ba;
+		}
+
+		public byte[] Read(ulong length)
+		{
+			byte[] ba = new byte[length];
+			for (ulong i = 0; i < length; i++)
+			{
+				ba[i] = (byte)_s.ReadByte();
+			}
+
 			return ba;
 		}
 
@@ -106,7 +83,7 @@ namespace Bridle.IO
 	    {
 	        StringBuilder sb = new StringBuilder();
 	        int c = _s.ReadByte();
-	        while (c != 0)
+	        while (c != 0 && !ReachedEndOfFile)
 	        {
 	            sb.Append((char)c);
 	            c = _s.ReadByte();
@@ -119,7 +96,7 @@ namespace Bridle.IO
 	    {
 	        StringBuilder sb = new StringBuilder();
 	        int c = _s.ReadByte();
-	        while (c != terminator)
+	        while (c != terminator && !ReachedEndOfFile)
 	        {
 	            sb.Append((char)c);
 	            c = _s.ReadByte();
@@ -133,7 +110,7 @@ namespace Bridle.IO
 	        StringBuilder sb = new StringBuilder();
 	        int i = 1;
 	        int c = _s.ReadByte();
-	        while (c != 0 && i <= bufferSize)
+	        while (c != 0 && i <= bufferSize && !ReachedEndOfFile)
 	        {
 	            sb.Append((char)c);
 	            c = _s.ReadByte();
@@ -149,10 +126,19 @@ namespace Bridle.IO
 	        StringBuilder sb = new StringBuilder((int)length);
 	        for (int i = 0; i < length; i++)
 	        {
-	            sb.Append((char)_s.ReadByte());
+				char c = (char)_s.ReadByte();
+				if (c == '\0')
+				{
+					Position += length - i - 1;
+					break;
+				}
+				else
+				{
+					sb.Append(c);
+				}
 	        }
 
-	        return sb.ToString().TrimEnd('\0');
+	        return sb.ToString();
 	    }
 
 	    public char[] ReadCharArray(int length)
@@ -404,5 +390,43 @@ namespace Bridle.IO
 	        return BitConverter.ToDouble(temp, 0);
         }
 	    #endregion
+
+		protected override void SetMethods(ByteOrder byteOrder)
+		{
+			switch (byteOrder)
+			{
+				case ByteOrder.LittleEndian:
+					ReadInt16 = ReadInt16Le;
+					ReadUInt16 = ReadUInt16Le;
+					ReadInt32 = ReadInt32Le;
+					ReadUInt32 = ReadUInt32Le;
+					ReadInt64 = ReadInt64Le;
+					ReadUInt64 = ReadUInt64Le;
+					ReadFloat = ReadFloatLe;
+					ReadDouble = ReadDoubleLe;
+					break;
+				case ByteOrder.BigEndian:
+					ReadInt16 = ReadInt16Be;
+					ReadUInt16 = ReadUInt16Be;
+					ReadInt32 = ReadInt32Be;
+					ReadUInt32 = ReadUInt32Be;
+					ReadInt64 = ReadInt64Be;
+					ReadUInt64 = ReadUInt64Be;
+					ReadFloat = ReadFloatBe;
+					ReadDouble = ReadDoubleBe;
+					break;
+				case ByteOrder.None:
+				default:
+					ReadInt16 = null;
+					ReadUInt16 = null;
+					ReadInt32 = null;
+					ReadUInt32 = null;
+					ReadInt64 = null;
+					ReadUInt64 = null;
+					ReadFloat = null;
+					ReadDouble = null;
+					break;
+			}
+		}
 	}
 }
