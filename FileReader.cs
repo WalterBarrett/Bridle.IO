@@ -29,29 +29,174 @@ namespace Bridle.IO
 			return ba;
 		}
 
-		public byte[] Read(long length)
+		public byte[] Read(long length) // TODO: Optimize
 		{
 			byte[] ba = new byte[length];
-			for (long i = 0; i < length; i++)
+			if (length <= int.MaxValue)
 			{
-				ba[i] = (byte)_s.ReadByte();
+				_s.Read(ba, 0, (int)length);
+			}
+			else
+			{
+				for (long i = 0; i < length; i++)
+				{
+					ba[i] = (byte)_s.ReadByte();
+				}
+			}
+			return ba;
+		}
+
+		public byte[] Read(ulong length) // TODO: Optimize
+		{
+			byte[] ba = new byte[length];
+			if (length <= int.MaxValue)
+			{
+				_s.Read(ba, 0, (int)length);
+			}
+			else
+			{
+				for (ulong i = 0; i < length; i++)
+				{
+					ba[i] = (byte)_s.ReadByte();
+				}
 			}
 
 			return ba;
 		}
 
-		public byte[] Read(ulong length)
+		public sbyte[] ReadArraySByte(ulong count) // TODO: Optimize
 		{
-			byte[] ba = new byte[length];
-			for (ulong i = 0; i < length; i++)
+			sbyte[] arr = new sbyte[count];
+			for (ulong i = 0; i < count; i++)
 			{
-				ba[i] = (byte)_s.ReadByte();
+				arr[i] = ReadSByte();
 			}
 
-			return ba;
+			return arr;
 		}
 
-	    public byte ReadByte()
+		public char[] ReadArrayChar(ulong count) // TODO: Optimize
+		{
+			char[] arr = new char[count];
+			for (ulong i = 0; i < count; i++)
+			{
+				arr[i] = ReadChar();
+			}
+
+			return arr;
+		}
+
+		public bool[] ReadArrayBool(ulong count) // TODO: Optimize
+		{
+			bool[] arr = new bool[count];
+			for (ulong i = 0; i < count; i++)
+			{
+				arr[i] = ReadBool();
+			}
+
+			return arr;
+		}
+
+		public string[] ReadArrayCString(ulong count) // TODO: Optimize
+		{
+			string[] arr = new string[count];
+			for (ulong i = 0; i < count; i++)
+			{
+				arr[i] = ReadCString();
+			}
+
+			return arr;
+		}
+
+		public short[] ReadArrayInt16(ulong count) // TODO: Optimize
+		{
+			short[] arr = new short[count];
+			for (ulong i = 0; i < count; i++)
+			{
+				arr[i] = ReadInt16();
+			}
+
+			return arr;
+		}
+
+		public ushort[] ReadArrayUInt16(ulong count) // TODO: Optimize
+		{
+            ushort[] arr = new ushort[count];
+			for (ulong i = 0; i < count; i++)
+			{
+				arr[i] = ReadUInt16();
+			}
+
+			return arr;
+		}
+
+		public int[] ReadArrayInt32(ulong count) // TODO: Optimize
+		{
+			int[] arr = new int[count];
+			for (ulong i = 0; i < count; i++)
+			{
+				arr[i] = ReadInt32();
+			}
+
+			return arr;
+		}
+
+		public uint[] ReadArrayUInt32(ulong count) // TODO: Optimize
+		{
+            uint[] arr = new uint[count];
+			for (ulong i = 0; i < count; i++)
+			{
+				arr[i] = ReadUInt32();
+			}
+
+			return arr;
+		}
+
+		public long[] ReadArrayInt64(ulong count) // TODO: Optimize
+		{
+			long[] arr = new long[count];
+			for (ulong i = 0; i < count; i++)
+			{
+				arr[i] = ReadInt64();
+			}
+
+			return arr;
+		}
+
+		public ulong[] ReadArrayUInt64(ulong count) // TODO: Optimize
+		{
+            ulong[] arr = new ulong[count];
+			for (ulong i = 0; i < count; i++)
+			{
+				arr[i] = ReadUInt64();
+			}
+
+			return arr;
+		}
+
+		public float[] ReadArrayFloat(ulong count) // TODO: Optimize
+		{
+			float[] arr = new float[count];
+			for (ulong i = 0; i < count; i++)
+			{
+				arr[i] = ReadFloat();
+			}
+
+			return arr;
+		}
+
+		public double[] ReadArrayDouble(ulong count) // TODO: Optimize
+		{
+			double[] arr = new double[count];
+			for (ulong i = 0; i < count; i++)
+			{
+				arr[i] = ReadDouble();
+			}
+
+			return arr;
+		}
+
+		public byte ReadByte()
 	    {
 	        return (byte)_s.ReadByte();
 	    }
@@ -141,6 +286,12 @@ namespace Bridle.IO
 	        return sb.ToString();
 	    }
 
+		public string ReadUnterminatedString(uint length, Encoding encoding)
+		{
+			var a = encoding.GetString(Read(length));
+			return a.TrimEnd('\0');
+		}
+
 	    public char[] ReadCharArray(int length)
 	    {
 
@@ -203,16 +354,16 @@ namespace Bridle.IO
         private ushort ReadUInt16Be()
 	    {
 	        int j = 0;
-	        j += _s.ReadByte() << 8;
-	        j += _s.ReadByte();
+	        j |= _s.ReadByte() << 8;
+	        j |= _s.ReadByte();
 	        return (ushort)j;
 	    }
 
 	    private ushort ReadUInt16Le()
 	    {
 	        int j = 0;
-	        j += _s.ReadByte();
-	        j += _s.ReadByte() << 8;
+	        j |= _s.ReadByte();
+	        j |= _s.ReadByte() << 8;
 	        return (ushort)j;
 	    }
         #endregion
@@ -249,20 +400,20 @@ namespace Bridle.IO
         private uint ReadUInt32Be()
 		{
 			uint j = 0;
-			j += (uint)_s.ReadByte() << 24;
-			j += (uint)_s.ReadByte() << 16;
-			j += (uint)_s.ReadByte() << 8;
-			j += (uint)_s.ReadByte();
+			j |= (uint)_s.ReadByte() << 24;
+			j |= (uint)_s.ReadByte() << 16;
+			j |= (uint)_s.ReadByte() << 8;
+			j |= (uint)_s.ReadByte();
 			return j;
 		}
         
 		private uint ReadUInt32Le()
 		{
 			uint j = 0;
-			j += (uint)_s.ReadByte();
-			j += (uint)_s.ReadByte() << 8;
-			j += (uint)_s.ReadByte() << 16;
-			j += (uint)_s.ReadByte() << 24;
+			j |= (uint)_s.ReadByte();
+			j |= (uint)_s.ReadByte() << 8;
+			j |= (uint)_s.ReadByte() << 16;
+			j |= (uint)_s.ReadByte() << 24;
 			return j;
 		}
         #endregion
