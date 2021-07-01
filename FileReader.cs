@@ -26,10 +26,35 @@ namespace Bridle.IO
 			ByteOrder = endianness;
 		}
 
-        #region Endianness Agnostic
-        public byte[] Read(int length) => _br.ReadBytes(length);
+        public T At<T>(long offset, Func<FileReader, T> action)
+        {
+            long initialPosition = Position;
+            Position = offset;
+            T ret = action.Invoke(this);
+            Position = initialPosition;
+            return ret;
+        }
 
-		public byte[] Read(long length) // TODO: Optimize
+        public T[] ReadArray<T>(T[] array) where T : IReadable, new()
+		{
+            for (int i = 0; i < array.Length; i++)
+            {
+                array[i] = Read<T>();
+            }
+            return array;
+		}
+
+		public T Read<T>() where T : IReadable, new()
+		{
+			T ret = new T();
+            ret.InitializeFromReader(this);
+            return ret;
+        }
+
+		#region Endianness Agnostic
+		public byte[] Read(int length) => _br.ReadBytes(length);
+
+        public byte[] Read(long length) // TODO: Optimize
 		{
 			byte[] ba = new byte[length];
 			if (length <= int.MaxValue)
@@ -458,5 +483,5 @@ namespace Bridle.IO
 					break;
 			}
 		}
-	}
+    }
 }

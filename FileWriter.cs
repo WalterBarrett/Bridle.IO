@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.Serialization;
 
 namespace Bridle.IO
 {
@@ -20,7 +21,52 @@ namespace Bridle.IO
 			ByteOrder = endianness;
 		}
 
-		#region Endianness Agnostic
+        public object this[long index]
+        {
+            set
+            {
+                long startingPosition = Position;
+                Position = index;
+                switch (value)
+                {
+					case byte[] byteArray: Write(byteArray); break;
+                    case sbyte[] array: foreach (var v in array) { WriteSByte(v); } break;
+                    case ushort[] array: foreach (var v in array) { WriteUInt16(v); } break;
+                    case short[] array: foreach (var v in array) { WriteInt16(v); } break;
+                    case uint[] array: foreach (var v in array) { WriteUInt32(v); } break;
+                    case int[] array: foreach (var v in array) { WriteInt32(v); } break;
+                    case ulong[] array: foreach (var v in array) { WriteUInt64(v); } break;
+                    case long[] array: foreach (var v in array) { WriteInt64(v); } break;
+                    case float[] array: foreach (var v in array) { WriteFloat(v); } break;
+                    case double[] array: foreach (var v in array) { WriteDouble(v); } break;
+                    case char[] array: foreach (var v in array) { WriteChar(v); } break;
+                    case bool[] array: foreach (var v in array) { WriteBool(v); } break;
+                    case string[] array: foreach (var v in array) { WriteCString(v); } break;
+                    case IWritable[] array: foreach (var v in array) { v.Write(this); } break;
+
+					case byte v: WriteByte(v); break;
+                    case sbyte v: WriteSByte(v); break;
+                    case ushort v: WriteUInt16(v);  break;
+                    case short v: WriteInt16(v); break;
+                    case uint v: WriteUInt32(v); break;
+                    case int v: WriteInt32(v); break;
+                    case ulong v: WriteUInt64(v); break;
+                    case long v: WriteInt64(v); break;
+                    case float v: WriteFloat(v); break;
+                    case double v: WriteDouble(v); break;
+                    case char v: WriteChar(v); break;
+                    case bool v: WriteBool(v); break;
+                    case string v: WriteCString(v); break;
+                    case IWritable v: v.Write(this); break;
+
+                    default: throw new NotImplementedException();
+				}
+
+                Position = startingPosition;
+            }
+        }
+
+        #region Endianness Agnostic
 		public void WriteCString(string value, int forceLength = -1)
         {
             int i;
@@ -52,6 +98,11 @@ namespace Bridle.IO
 
 	    public void WriteUnterminatedString(string value, int forceLength = -1)
 	    {
+			if (value == null)
+			{
+				return;
+			}
+
 	        int i = 0;
 
 	        if (forceLength == -1)

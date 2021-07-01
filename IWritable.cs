@@ -1,6 +1,4 @@
-﻿using Bridle.IO;
-
-namespace WadTools
+﻿namespace Bridle.IO
 {
     public interface IWritable
     {

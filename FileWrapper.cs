@@ -8,7 +8,7 @@ namespace Bridle.IO
 
         public long Length => _s.Length;
 
-        public FileWrapper(Stream stream)
+        protected FileWrapper(Stream stream)
         {
             _s = stream;
         }
@@ -19,10 +19,7 @@ namespace Bridle.IO
             set => _s.Seek(value, SeekOrigin.Begin);
         }
 
-        public bool ReachedEndOfFile
-        {
-            get => _s.Position >= _s.Length;
-        }
+        public bool ReachedEndOfFile => _s.Position >= _s.Length;
 
         protected abstract void SetMethods(ByteOrder byteOrder);
 

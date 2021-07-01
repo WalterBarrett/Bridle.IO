@@ -1,9 +1,7 @@
-﻿using Bridle.IO;
-
-namespace WadTools
+﻿namespace Bridle.IO
 {
     public interface IReadable
     {
-        void Read(FileReader reader);
+        void InitializeFromReader(FileReader reader);
     }
 }
