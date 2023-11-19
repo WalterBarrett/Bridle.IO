@@ -8,8 +8,14 @@ namespace Bridle.IO
 	{
 		private BinaryReader _br;
 
+        #region Constructors
 		public FileReader(Stream stream, ByteOrder endianness) : base(stream)
 	    {
+			if (!stream.CanRead)
+			{
+				throw new ArgumentException($"Can not create a {nameof(FileReader)} for a stream of type {stream.GetType().FullName}.");
+			}
+
 			_br = new BinaryReader(_s);
 	        ByteOrder = endianness;
 		}
@@ -25,6 +31,7 @@ namespace Bridle.IO
 			_br = new BinaryReader(_s);
 			ByteOrder = endianness;
 		}
+		#endregion
 
         public T At<T>(long offset, Func<FileReader, T> action)
         {
@@ -52,6 +59,15 @@ namespace Bridle.IO
         }
 
 		#region Endianness Agnostic
+		public byte[] ToArray()
+		{
+			var oldPos = _s.Position;
+			_s.Position = 0;
+			byte[] ret = _br.ReadBytes((int)_s.Length);
+			_s.Position = oldPos;
+			return ret;
+		}
+
 		public byte[] Read(int length) => _br.ReadBytes(length);
 
         public byte[] Read(long length) // TODO: Optimize
@@ -150,6 +166,28 @@ namespace Bridle.IO
 			for (ulong i = 0; i < count; i++)
 			{
 				arr[i] = ReadUInt16();
+			}
+
+			return arr;
+		}
+
+		public int[] ReadArrayInt24(ulong count) // TODO: Optimize
+		{
+			int[] arr = new int[count];
+			for (ulong i = 0; i < count; i++)
+			{
+				arr[i] = ReadInt24();
+			}
+
+			return arr;
+		}
+
+		public uint[] ReadArrayUInt24(ulong count) // TODO: Optimize
+		{
+			uint[] arr = new uint[count];
+			for (ulong i = 0; i < count; i++)
+			{
+				arr[i] = ReadUInt24();
 			}
 
 			return arr;
@@ -353,6 +391,49 @@ namespace Bridle.IO
 	    }
 		#endregion
 
+		#region Int24/UInt24
+		public delegate int DelegateReadInt24();
+		public delegate uint DelegateReadUInt24();
+		public DelegateReadInt24 ReadInt24;
+		public DelegateReadUInt24 ReadUInt24;
+
+		private int ReadInt24Be()
+		{
+			int j = 0;
+			j += _s.ReadByte() << 16;
+			j += _s.ReadByte() << 8;
+			j += _s.ReadByte();
+			return j;
+		}
+
+		private uint ReadUInt24Be()
+		{
+			uint j = 0;
+			j |= (uint)_s.ReadByte() << 16;
+			j |= (uint)_s.ReadByte() << 8;
+			j |= (uint)_s.ReadByte();
+			return j;
+		}
+
+		private int ReadInt24Le()
+		{
+			int j = 0;
+			j += _s.ReadByte();
+			j += _s.ReadByte() << 8;
+			j += _s.ReadByte() << 16;
+			return j;
+		}
+
+		private uint ReadUInt24Le()
+		{
+			uint j = 0;
+			j |= (uint)_s.ReadByte();
+			j |= (uint)_s.ReadByte() << 8;
+			j |= (uint)_s.ReadByte() << 16;
+			return j;
+		}
+		#endregion
+
 		#region Int32/UInt32
 		public delegate int DelegateReadInt32();
 		public delegate uint DelegateReadUInt32();
@@ -453,6 +534,8 @@ namespace Bridle.IO
 				case ByteOrder.LittleEndian:
 					ReadInt16 = _br.ReadInt16;
 					ReadUInt16 = _br.ReadUInt16;
+					ReadInt24 = ReadInt24Le;
+					ReadUInt24 = ReadUInt24Le;
 					ReadInt32 = _br.ReadInt32;
 					ReadUInt32 = _br.ReadUInt32;
 					ReadInt64 = _br.ReadInt64;
@@ -463,6 +546,8 @@ namespace Bridle.IO
 				case ByteOrder.BigEndian:
 					ReadInt16 = ReadInt16Be;
 					ReadUInt16 = ReadUInt16Be;
+					ReadInt24 = ReadInt24Be;
+					ReadUInt24 = ReadUInt24Be;
 					ReadInt32 = ReadInt32Be;
 					ReadUInt32 = ReadUInt32Be;
 					ReadInt64 = ReadInt64Be;
@@ -474,6 +559,8 @@ namespace Bridle.IO
 				default:
 					ReadInt16 = null;
 					ReadUInt16 = null;
+					ReadInt24 = null;
+					ReadUInt24 = null;
 					ReadInt32 = null;
 					ReadUInt32 = null;
 					ReadInt64 = null;

@@ -6,8 +6,14 @@ namespace Bridle.IO
 {
 	public sealed class FileWriter : FileWrapper, IDisposable
 	{
-		public FileWriter(Stream stream, ByteOrder endianness) : base(stream)
+		#region Constructors
+        public FileWriter(Stream stream, ByteOrder endianness) : base(stream)
 		{
+			if (!stream.CanWrite)
+			{
+				throw new ArgumentException($"Can not create a {nameof(FileWriter)} for a stream of type {stream.GetType().FullName}.");
+			}
+
 			ByteOrder = endianness;
 		}
 
@@ -20,6 +26,12 @@ namespace Bridle.IO
 		{
 			ByteOrder = endianness;
 		}
+
+		public FileWriter(ByteOrder endianness) : base(new MemoryStream())
+		{
+			ByteOrder = endianness;
+		}
+		#endregion
 
         public object this[long index]
         {
@@ -66,7 +78,17 @@ namespace Bridle.IO
             }
         }
 
-        #region Endianness Agnostic
+		#region Endianness Agnostic
+		public byte[] ToArray()
+		{
+			var oldPos = _s.Position;
+			_s.Position = 0;
+			byte[] ret = new byte[_s.Length];
+			_s.Read(ret, 0, (int)_s.Length);
+			_s.Position = oldPos;
+			return ret;
+		}
+
 		public void WriteCString(string value, int forceLength = -1)
         {
             int i;
@@ -134,12 +156,22 @@ namespace Bridle.IO
 
 		    for (int i = 0; i < ba.Length; i++)
 		    {
-		        byte c = ba[i];
-		        _s.WriteByte(c);
+		        _s.WriteByte(ba[i]);
 		    }
 		}
 
-	    public void WriteByte(byte value)
+		public void Write(FileReader fr)
+		{
+			if (fr == null)
+			{
+				return;
+			}
+
+			byte[] ba = fr.ToArray();
+			_s.Write(ba, 0, ba.Length);
+		}
+
+		public void WriteByte(byte value)
 	    {
 	        _s.WriteByte(value);
 	    }
@@ -427,14 +459,27 @@ namespace Bridle.IO
 			}
 		}
 
-		public FileReader GetReader()
-		{
-			return new FileReader(_s, ByteOrder);
-		}
+        [Obsolete("GetReader() is deprecated due to possible disposal issues; please use ToArray() instead.")]
+        public FileReader GetReader() => new FileReader(_s, ByteOrder);
 
-		public void Flush()
+        public void Flush()
 		{
 			_s.Flush();
-		}
-	}
+        }
+
+        public void Write<T>(T value) where T : IWritable, new() => value.Write(this);
+        public void WriteArray<T>(T[] array) where T : IWritable, new() { foreach (T v in array) { Write(v); } }
+        public void WriteArraySByte(sbyte[] array) { foreach (sbyte v in array) { WriteSByte(v); } }
+        public void WriteArrayChar(char[] array) { foreach (char v in array) { WriteChar(v); } }
+        public void WriteArrayBool(bool[] array) { foreach (bool v in array) { WriteBool(v); } }
+        public void WriteArrayCString(string[] array) { foreach (string v in array) { WriteCString(v); } }
+        public void WriteArrayUInt16(ushort[] array) { foreach (ushort v in array) { WriteUInt16(v); } }
+        public void WriteArrayInt16(short[] array) { foreach (short v in array) { WriteInt16(v); } }
+        public void WriteArrayUInt32(uint[] array) { foreach (uint v in array) { WriteUInt32(v); } }
+        public void WriteArrayInt32(int[] array) { foreach (int v in array) { WriteInt32(v); } }
+        public void WriteArrayUInt64(ulong[] array) { foreach (ulong v in array) { WriteUInt64(v); } }
+        public void WriteArrayInt64(long[] array) { foreach (long v in array) { WriteInt64(v); } }
+        public void WriteArrayFloat(float[] array) { foreach (float v in array) { WriteFloat(v); } }
+        public void WriteArrayDouble(double[] array) { foreach (double v in array) { WriteDouble(v); } }
+    }
 }

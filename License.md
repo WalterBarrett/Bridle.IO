@@ -1,7 +1,7 @@
 The BSD 3-Clause License
 ========================
 
-Copyright (c) 2019, Walter Barrett  
+Copyright (c) 2019-2023, Walter Barrett  
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,

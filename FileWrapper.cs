@@ -10,7 +10,16 @@ namespace Bridle.IO
 
         protected FileWrapper(Stream stream)
         {
-            _s = stream;
+            if (!stream.CanSeek || stream.CanTimeout)
+            {
+                _s = new MemoryStream();
+                stream.CopyTo(_s);
+                _s.Position = 0;
+            }
+            else
+            {
+                _s = stream;
+            }
         }
 
         public long Position
